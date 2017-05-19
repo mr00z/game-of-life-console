@@ -11,9 +11,13 @@ namespace GameOfLife
     {
         static void Main(string[] args)
         {
-            World w = new World("23/23", @"C:\Users\Marcin\Source\Repos\game-of-life-console\GameOfLife\GameOfLife\gol.txt");
+            Console.WriteLine("Specify rules of the game");
+            string rules = Console.ReadLine();
+            World w = new World(rules, @"C:\Users\Marcin\Source\Repos\game-of-life-console\GameOfLife\GameOfLife\gol.txt");
             w.LoadWorld();
             w.ShowWorld();
+            Console.WriteLine();
+            w.PlayGame();
         }
     }
 }

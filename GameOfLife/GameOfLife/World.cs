@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DeepEqual.Syntax;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -18,11 +19,11 @@ namespace GameOfLife
 
         public World(string choice, string filename)
         {
-            world = new int[9, 9];
+            world = new int[10, 10];
             _var1.Add(int.Parse(choice.ElementAt(0).ToString()));
             _var1.Add(int.Parse(choice.ElementAt(1).ToString()));
             _var2.Add(int.Parse(choice.ElementAt(3).ToString()));
-            _var2.Add(int.Parse(choice.ElementAt(4).ToString()));
+            if(choice.Length>4) _var2.Add(int.Parse(choice.ElementAt(4).ToString()));
 
             _filename = filename;
 
@@ -34,10 +35,10 @@ namespace GameOfLife
         {
             using (var sr = new StreamReader(_filename))
             {
-                for (int i = 0; i < world.GetLength(0); i++)
+                for (int i = 0; i < _length1; i++)
                 {
                     string[] line = Regex.Matches(sr.ReadLine(), @"\d").Cast<Match>().Select(m => m.Value).ToArray();
-                    for (int j = 0; j < world.GetLength(1); j++)
+                    for (int j = 0; j < _length2; j++)
                     {
                         world[i, j] = int.Parse(line[j]);
                     }
@@ -47,80 +48,105 @@ namespace GameOfLife
 
         public void ShowWorld()
         {
-            for (int i = 0; i < world.GetLength(0); i++)
+            for (int i = 0; i < _length1; i++)
             {
-                for (int j = 0; j < world.GetLength(1); j++)
+                for (int j = 0; j < _length2; j++)
                 {
                     var a = world[i, j];
-                    Console.Write(world[i,j]);
+                    Console.Write(world[i,j]+" ");
                 }
                 Console.WriteLine();
             }
         }
 
-        public void performRound()
+        public void PlayGame()
         {
-            int[,] next = new int[9, 9];
-            for (int i = 0; i < world.GetLength(0); i++)
+            int iter = 0;
+            while (true)
             {
-                for (int j = 0; j < world.GetLength(1); j++)
+                int[,] next = new int[10, 10];
+                for (int i = 0; i < _length1; i++)
                 {
-                    if (isAlive(i, j)) next[i, j] = 1;
-                    else next[i, j] = 0;
+                    for (int j = 0; j < _length2; j++)
+                    {
+                        if (IsAlive(i, j)) next[i, j] = 1;
+                        else next[i, j] = 0;
+                    }
+                }
+                if (world.IsDeepEqual(next)) break;
+                else
+                {
+                    world = next;
+                    ShowWorld();
+                    Console.WriteLine();
+                }
+                iter++;
+                if (iter == 20) break;
+            }
+            
+        }
+
+        private bool IsAlive(int index1, int index2)
+        {
+            int neighbours = 0;
+            int[,] neighbourhood = CreateNeighbourhood(index1, index2);
+
+            for (int i = 0, ind1 = index1 - 1; i < neighbourhood.GetLength(0); i++, ind1++)
+            {
+                for (int j = 0, ind2 = index2 - 1; j < neighbourhood.GetLength(1); j++, ind2++)
+                {
+                    if (neighbourhood[i, j] == 1) neighbours+=world[ind1, ind2];
                 }
             }
-            world = next;
-            ShowWorld();
-        }
 
-        private bool isAlive(int index1, int index2)
-        {
-            int neighbours;
-            if (index1==0 && index2 == 0)
+
+            if (world[index1, index2] == 1)
             {
-                neighbours = countTopLeft();
-                if (_var1.Contains(neighbours)) return true;
-                else return false;
+                int l = _var1.Count();
+
+                if (l == 1)
+                {
+                    if (neighbours == _var1.ElementAt(0)) return true;
+                    else return false;
+                }
+                else
+                {
+                    if (neighbours == _var1.ElementAt(0)||neighbours==_var1.ElementAt(1)) return true;
+                    else return false;
+                }
             }
-            else if (index1==0 && index2 == 9)
+            else
             {
-                neighbours = countTopRight();
-                if (_var1.Contains(neighbours)) return true;
-                else return false;
+                int l = _var2.Count();
+
+                if (l == 1)
+                {
+                    if (neighbours == _var2.ElementAt(0)) return true;
+                    else return false;
+                }
+                else
+                {
+                    if (neighbours == _var2.ElementAt(0) || neighbours == _var2.ElementAt(1)) return true;
+                    else return false;
+                }
             }
-            else if (index1 == 9 && index2 == 0)
+        }
+
+        private int[,] CreateNeighbourhood(int index1, int index2)
+        {
+            int[,] neighbourhood = new int[3, 3];
+
+            for (int i = 0, ind1 = index1 -1; i < 3; i++, ind1++)
             {
-                neighbours = countDownLeft();
-                if (_var1.Contains(neighbours)) return true;
-                else return false;
+                for (int j = 0, ind2 = index2-1; j < 3; j++, ind2++)
+                {
+                    if (ind1 < 0 || ind1 > 9 || ind2 < 0 || ind2 > 9) neighbourhood[i, j] = 0;
+                    else if (ind1 == index1 && ind2 == index2) neighbourhood[i, j] = 0;
+                    else neighbourhood[i, j] = 1;
+                }
             }
-            else if (index1 == 9 && index2 == 9)
-            {
-                neighbours = countDownRight();
-                if (_var1.Contains(neighbours)) return true;
-                else return false;
-            }
-
+            return neighbourhood;
         }
 
-        private int countTopLeft()
-        {
-            return world[0, 1] + world[1, 0] + world[1, 1];
-        }
-
-        private int countTopRight()
-        {
-            return world[0, 8] + world[1, _length2-1] + world[1, _length2];
-        }
-
-        private int countDownLeft()
-        {
-            return world[_length1-1, 0] + world[_length1-1, 1] + world[_length1, 0];
-        }
-
-        private int countDownRight()
-        {
-            return world[_length1, _length2-1] + world[_length1-1, _length2-1] + world[_length1-1, _length2];
-        }
     }
 }
